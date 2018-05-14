@@ -1,5 +1,3 @@
-# butterfly
-
 library(doParallel)
 
 registerDoParallel(cores=22)
