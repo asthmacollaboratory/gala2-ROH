@@ -24,21 +24,21 @@
 # function definitions
 # ==============================================================================
 
-LoadPackage = function(package.name){
+LoadPackage = function(package.name, library.path){
 	# LoadPackage 
 	#
 	# This function loads a package into the current workspace.
 	# If the package is not installed, then LoadPackage will attempt to install it. 
 	# The installed package is then silently loaded
 
-	if(!require(package.name, character.only = TRUE, quietly = TRUE, warn.conflicts = FALSE)){
-		install.packages(package.name)
-		library(package.name, character.only = TRUE, quietly = TRUE, warn.conflicts = FALSE)
+	if(!require(package.name, lib.loc = library.path, character.only = TRUE, quietly = TRUE, warn.conflicts = FALSE)){
+		install.packages(package.name, lib = library.path)
+		library(package.name, lib.loc = library.path, character.only = TRUE, quietly = TRUE, warn.conflicts = FALSE)
 	}
 	return()
 }
 
-AutoloadPackages = function(vector.of.package.names){
+AutoloadPackages = function(vector.of.package.names, library.path){
 	# AutoloadPackages
 	#
 	# This function calls LoadPackage on a vector of package names.
@@ -48,7 +48,7 @@ AutoloadPackages = function(vector.of.package.names){
 	#
 	# Output: NULL
 
-	invisible(sapply(vector.of.package.names, LoadPackage))
+	invisible(sapply(vector.of.package.names, LoadPackage, library.path))
 	return()
 }
 
@@ -58,9 +58,10 @@ AutoloadPackages = function(vector.of.package.names){
 cran.mirror     = "https://cran.cnr.berkeley.edu/"  # use UC Berkeley CRAN mirror
 max.print.lines = 200  # default number of lines to print
 editor          = "vim"  # default text editor
+library.path    = "/media/BurchardRaid01/LabShare/Data/share_data_projectInProgress/ROH_project/R_libraries"
 
 # this vector should contain all packages required for analysis
-auto.loads = c("dplyr", "ggplot2", "data.table", "ggpubr", "doParallel", "readr",
+auto.loads = c("ggplot2", "dplyr", "data.table", "ggpubr", "doParallel", "readr",
     "qqman", "ggrepel", "RColorBrewer", "grid", "gridExtra") 
 
 # ==============================================================================
@@ -73,6 +74,9 @@ local({
     r["CRAN"] = cran.mirror 
     options(repos=r)
 })
+
+# set group R library path
+.libPaths(library.path)
 
 # R allows strings as factors by default
 # this is one of the most frustrating engineering decisions in the language
@@ -89,4 +93,4 @@ options(editor=editor)
 options(menu.graphics=FALSE)
 
 # autoload packages
-AutoloadPackages(auto.loads)
+AutoloadPackages(auto.loads, library.path)
