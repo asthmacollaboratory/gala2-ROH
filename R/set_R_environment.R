@@ -59,6 +59,7 @@ cran.mirror     = "https://cran.cnr.berkeley.edu/"  # use UC Berkeley CRAN mirro
 max.print.lines = 200  # default number of lines to print
 editor          = "vim"  # default text editor
 library.path    = "/media/BurchardRaid01/LabShare/Data/share_data_projectInProgress/ROH_project/R_libraries"
+bitmap.type     = "cairo"  # needed for producing raster plots
 
 # this vector should contain all packages required for analysis
 auto.loads = c("ggplot2", "dplyr", "data.table", "ggpubr", "doParallel", "readr",
@@ -91,6 +92,9 @@ options(editor=editor)
 
 # turn off tk since we do not need it here
 options(menu.graphics=FALSE)
+
+# enable raster graphics
+options(bitmapType = "cairo")
 
 # autoload packages
 AutoloadPackages(auto.loads, library.path)
