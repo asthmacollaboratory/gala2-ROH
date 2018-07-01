@@ -1,7 +1,8 @@
 # ==============================================================================
 # Copyright 2018, Asthma Collaboratory
-# coded by Kevin L. Keys, Pagé C. Goddard, Andrew Zeiger 
-#   
+# coded by Kevin L. Keys, Pagé C. Goddard, Andrew Zeiger
+#  
+
 # This script contains several subroutines to facilitate plotting.
 # It relies heavily on ggplot2 and other tidyverse packages.
 # Source this script after setting the R environment, e.g.
@@ -12,30 +13,30 @@
 # This ensures that all requisite libraries are loaded before defining the
 # plotting functions contained herein.
 #
-# This script plotting_routines.R contains no executable code. 
+# This script plotting_routines.R contains no executable code.
 #
 # It has no input or output.
 # ==============================================================================
 
 # ==============================================================================
-# define functions here 
+# define functions here
 # ==============================================================================
 
-CreateManhattanPlot = function(df, threshold = 1e-2, highlight.SNPs = NULL, ylims = c(0,8), color = c("black", "blue"), 
+CreateManhattanPlot = function(df, threshold = 1e-2, highlight.SNPs = NULL, ylims = c(0,8), color = c("black", "blue"),
     title = "Manhattan plot", significance.threshold = 5e-8, suggestive.threshold = 1e-7, save.as = NULL){
-    # Create a Manhattan Plot 
-    # 
+    # Create a Manhattan Plot
+    #
     # This function creates a Manhattan plot. It expects a data frame with the following four labeled columns:
     #     CHR: the chromosome to plot
-    #     SNP: the single nucleotide polymorphisms (one per row) 
+    #     SNP: the single nucleotide polymorphisms (one per row)
     #     BP:  the base pair (position) of each SNP to plot
     #     P:   the p-value from the association test, one per SNP
-    #     
+    #    
     #
     # Args:
     #     df: data frame with colnames [SNP, CHR, BP, P]
     # 	  threshold: pvalue limit for labeling SNPs on the plot. SNPs with p-values greater than "threshold"
-    #         are not plotted. High values of "threshold" make plotting speedy but make plots look strange. 
+    #         are not plotted. High values of "threshold" make plotting speedy but make plots look strange.
     #         Default: 1e-2
     #     highlight.SNPs: vector of SNP ids to highlight,
     #         e.g.  highlight.SNPs = c("rs12345", "rs90181294", "rs556782")
@@ -46,7 +47,7 @@ CreateManhattanPlot = function(df, threshold = 1e-2, highlight.SNPs = NULL, ylim
     #     color = a vector of colors (min 2 colors)
     #         e.g. [color = c("color1", "color2", "color3")]
     #         Default: c("black", "blue")
-    #     title: an informative plot title 
+    #     title: an informative plot title
     #         Default: "Manhattan plot"
     #     significance.threshold: the Bonferroni significance threshold.
     #         Default: 5e-8
@@ -58,11 +59,11 @@ CreateManhattanPlot = function(df, threshold = 1e-2, highlight.SNPs = NULL, ylim
     #    g is a ggplot object containing the Manhattan plot
 
 	# format df with (complicated) dplyr filtering
-	df.tmp = df %>% 
+	df.tmp = df %>%
 
 		# Compute chromosome size
-		group_by(CHR) %>% 
-		summarise(chr_len = max(BP)) %>% 
+		group_by(CHR) %>%
+		summarise(chr_len = max(BP)) %>%
 
 		# Calculate cumulative position of each chromosome
 		mutate(tot = cumsum(chr_len) - chr_len) %>%
@@ -78,11 +79,11 @@ CreateManhattanPlot = function(df, threshold = 1e-2, highlight.SNPs = NULL, ylim
 		# Add highlight and annotation information
 		mutate(is_highlight = ifelse(SNP %in% highlight.SNPs, "yes", "no")) %>%
 		mutate(is_annotate = ifelse(P < threshold, "yes", "no"))  ### done filtering!
-  
+ 
 	# get chromosome center positions for x-axis
 	axisdf = df.tmp %>% group_by(CHR) %>% summarize(center = (max(BPcum) + min(BPcum)) / 2 )
 
-	# plot with filtered data frame 
+	# plot with filtered data frame
 	# we will construct this ggplot stepwise
 	g = ggplot(df.tmp, aes(x = BPcum, y = -log10(P)))
 
@@ -91,7 +92,7 @@ CreateManhattanPlot = function(df, threshold = 1e-2, highlight.SNPs = NULL, ylim
 	scale_color_manual(values = rep(color, 22))
 
 	# custom X axis
-	# note: expand = c(0, 0) removes space between plot area and x axis 
+	# note: expand = c(0, 0) removes space between plot area and x axis
 	g = g + scale_x_continuous(label = axisdf$CHR, breaks = axisdf$center) +
 	scale_y_continuous(expand = c(0, 0), limits = ylims)
 
@@ -118,7 +119,7 @@ CreateManhattanPlot = function(df, threshold = 1e-2, highlight.SNPs = NULL, ylim
 
 	# custom the theme
 	g = g + theme_bw(base_size = 22) +
-		theme( 
+		theme(
 			plot.title = element_text(hjust = 0.5),
 			legend.position = "none",
 			panel.border = element_blank(),
@@ -135,18 +136,18 @@ CreateManhattanPlot = function(df, threshold = 1e-2, highlight.SNPs = NULL, ylim
 }
 
 CreateQQPlot = function(df, title = "QQ Plot", subtitle = NULL, xlim = NULL, ylim = NULL, save.as = NULL) {
-    # Create a Quantile-Quantile Plot 
-    # 
+    # Create a Quantile-Quantile Plot
+    #
     # This function creates a QQ plot of GWAS p-values. It expects a data frame with the following four labeled columns:
     #     CHR: the chromosome to plot
-    #     SNP: the single nucleotide polymorphisms (one per row) 
+    #     SNP: the single nucleotide polymorphisms (one per row)
     #     BP:  the base pair (position) of each SNP to plot
     #     P:   the p-value from the association test, one per SNP
-    #     
+    #    
     #
     # Args:
     #     df: data frame with colnames [SNP, CHR, BP, P]
-    #     title: an informative plot title 
+    #     title: an informative plot title
     #         Default: "QQ Plot"
     #     subtitle: an informative plot subtitle
     #         Default: NULL (will actually output genomic lambda, e.g. "λ = 1.0")
@@ -172,7 +173,7 @@ CreateQQPlot = function(df, title = "QQ Plot", subtitle = NULL, xlim = NULL, yli
     # adjust the axis limits
     g = g + coord_cartesian(xlim = xlim, ylim = ylim)
 
-    # compute genomic control factor 
+    # compute genomic control factor
     # when adding title, also add subtitle with genomic lambda included
     genomic.control.factor = median(qchisq(1 - df$P, 1)) / qchisq(0.5, 1)
     g = g + labs(title = title, subtitle = bquote(lambda == .(genomic.control.factor)))
