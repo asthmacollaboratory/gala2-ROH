@@ -22,7 +22,7 @@
 # define functions here
 # ==============================================================================
 
-CreateManhattanPlot = function(df, threshold = 1e-2, highlight.SNPs = NULL, ylims = c(0,8), color = c("black", "blue"),
+CreateManhattanPlot = function(df, threshold = 5e-8, highlight.SNPs = NULL, ylims = c(0,8), color = c("black", "blue"),
     title = "Manhattan plot", significance.threshold = 5e-8, suggestive.threshold = 1e-7, save.as = NULL){
     # Create a Manhattan Plot
     #
@@ -31,13 +31,13 @@ CreateManhattanPlot = function(df, threshold = 1e-2, highlight.SNPs = NULL, ylim
     #     SNP: the single nucleotide polymorphisms (one per row)
     #     BP:  the base pair (position) of each SNP to plot
     #     P:   the p-value from the association test, one per SNP
-    #    
     #
     # Args:
     #     df: data frame with colnames [SNP, CHR, BP, P]
     # 	  threshold: pvalue limit for labeling SNPs on the plot. SNPs with p-values greater than "threshold"
-    #         are not plotted. High values of "threshold" make plotting speedy but make plots look strange.
-    #         Default: 1e-2
+    #         are not plotted. BEWARE: high values of "threshold" can potentially lead to many SNPs
+    #         being labeled and thereby make make plots unreadable! 
+    #         Default: 5e-8 (label any SNP with "standard" Bonferroni-corrected genome-wide significance)
     #     highlight.SNPs: vector of SNP ids to highlight,
     #         e.g.  highlight.SNPs = c("rs12345", "rs90181294", "rs556782")
     #         Default: NULL (no SNPs to highlight)
@@ -50,7 +50,7 @@ CreateManhattanPlot = function(df, threshold = 1e-2, highlight.SNPs = NULL, ylim
     #     title: an informative plot title
     #         Default: "Manhattan plot"
     #     significance.threshold: the Bonferroni significance threshold.
-    #         Default: 5e-8
+    #         Default: 5e-8 ("standard" genome-wide significance)
     #     suggestive.threshold: the suggestive threshold of significance.
     #         Default: 1e-7
     #     save.as: a filepath for saving the plot to file
