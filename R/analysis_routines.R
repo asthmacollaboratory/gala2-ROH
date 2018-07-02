@@ -22,7 +22,7 @@
 
 
 
-PerformAssociationAnalysis = function(input.prefix, output.prefix, phenotype.df, model.formula, suffix = "ROH.R.out", type = "gaussian", ncores = 22, min.samples.at.probe = 2) {
+PerformAssociationAnalysis = function(input.prefix, output.prefix, phenotype.df, model.formula, suffix = "ROH.R.out", type = "gaussian", ncores = 22, min.samples.at.probe = 2, library.path = "/media/BurchardRaid01/LabShare/Data/share_data_projectInProgress/ROH_project/R_libraries") {
     # PerformAssociationAnalysis
     #
     # This function merges ROH probes with phenotype data. It then fits a generalized linear model to the data.
