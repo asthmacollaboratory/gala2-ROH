@@ -7,8 +7,8 @@
 # If a package is not installed, then the script will attempt to install it.
 # Note that the installation code is somewhat brittle and unrobust.
 # The content of this file is similar in spirit to an .Rprofile.
-# However, it is not meant to replace an .Rprofile.
-# Instead, load it at the beginning of GALA II ROH analysis scripts like so:
+# However, it is not meant to .Rprofile, and may conflict with it.
+# Load it at the beginning of ROH analysis scripts like so:
 #
 #     source("set_R_environment.R")
 #
@@ -73,11 +73,11 @@ auto.loads = c("ggplot2", "dplyr", "data.table", "ggpubr", "doParallel", "readr"
 local({
     r = getOption("repos")
     r["CRAN"] = cran.mirror 
-    options(repos=r)
+    options(repos = r)
 })
 
 # set group R library path
-.libPaths(library.path)
+.libPaths(c(library.path, .libPaths()))
 
 # R allows strings as factors by default
 # this is one of the most frustrating engineering decisions in the language
@@ -94,7 +94,7 @@ options(editor=editor)
 options(menu.graphics=FALSE)
 
 # enable raster graphics
-options(bitmapType = "cairo")
+options(bitmapType = bitmap.type)
 
 # autoload packages
 AutoloadPackages(auto.loads, library.path)

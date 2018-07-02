@@ -66,6 +66,10 @@ PerformAssociationAnalysis = function(input.prefix, output.prefix, phenotype.df,
     # run association analysis for each chromosome separately
     foreach (chr = 1:22) %dopar% {
 
+        # this line ensures that all of the parallel workers look to the same library folder
+        # library.path is defined in set_R_environment.R
+        .libPaths(c(library.path, .libPaths()))
+
         input.file.path = paste(input.prefix, chr, suffix, sep = ".")
         output.file.path = paste(output.prefix, chr, "ROH.R.out.results", sep = ".")
 
@@ -74,7 +78,6 @@ PerformAssociationAnalysis = function(input.prefix, output.prefix, phenotype.df,
         roh.data = read.table(input.file.path, header = TRUE, check.names = FALSE, stringsAsFactors = FALSE)
 
         # must subset the ROH data to included all samples with a minimum number of probes in ROH segments
-
         # need two pieces:
         # (1) the number of SNPs in a ROH for each sample, and
         # (2) the column dimension of roh.data
