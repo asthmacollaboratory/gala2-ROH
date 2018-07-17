@@ -2,7 +2,6 @@
 # Copyright 2018, Asthma Collaboratory
 # coded by Kevin L. Keys, Pagé C. Goddard, Andrew Zeiger
 #  
-
 # This script contains several subroutines to facilitate plotting.
 # It relies heavily on ggplot2 and other tidyverse packages.
 # Source this script after setting the R environment, e.g.
