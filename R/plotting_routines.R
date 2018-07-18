@@ -158,13 +158,19 @@ CreateQQPlot = function(df, title = "QQ Plot", subtitle = NULL, xlim = NULL, yli
     # Outputs:
     #    g is a ggplot object containing the Manhattan plot
 
-    # the stat_qq() layer expects an aesthetic "sample"
-    g = ggplot(df, aes(sample = P)) + geom_qq()
+    # could theoretically use new ggplot2 3.0.0 functions for this
+    # unfortunately, they do not handle -log10 transformed p-values nicely
+    # code below is appropriate for untransformed p-values
+    # note: the stat_qq() layer expects an aesthetic "sample"
+    #g = ggplot(df, aes(sample = P)) + geom_qq(distribution = stats::qunif)
+    #g = g + geom_qq_line(distribution = stats::qunif)
 
-    # note: we draw the qq-line manually
-    # in future version of ggplot2, this can be done within ggplot itself; see here
-    # https://stackoverflow.com/questions/4357031/qqnorm-and-qqline-in-ggplot2
-    g = g + geom_abline(intercept = mean(df$P), slope = sd(df$P))
+    # make a transformed copy of the p-values for plotting
+    df.copy = data.frame("observed" = -log10(sort(df$P)), "expected" = -log10(ppoints(length(df$P)))) 
+    g = ggplot(df.copy, aes(x = expected, y = observed)) + geom_point()
+
+    # draw the qq-line
+    g = g + geom_abline(intercept = 0, slope = 1, color = "red")
 
     # prettify the axis labels
     g = g + xlab("Theoretical Quantiles") + ylab("Sample Quantiles")
@@ -173,8 +179,10 @@ CreateQQPlot = function(df, title = "QQ Plot", subtitle = NULL, xlim = NULL, yli
     g = g + coord_cartesian(xlim = xlim, ylim = ylim)
 
     # compute genomic control factor
+    # note that we operate on the original and untransformed p-values!
     # when adding title, also add subtitle with genomic lambda included
-    genomic.control.factor = median(qchisq(1 - df$P, 1)) / qchisq(0.5, 1)
+    qchi = qchisq(df$P, 1, lower.tail = FALSE)
+    genomic.control.factor = median(qchi[!is.nan(qchi)], na.rm = TRUE) / qchisq(0.5, 1)
     g = g + labs(title = title, subtitle = bquote(lambda == .(genomic.control.factor)))
 
     # save to file?
