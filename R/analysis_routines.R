@@ -99,8 +99,6 @@ PerformAssociationAnalysis = function(input.prefix, output.prefix, phenotype.df,
 
         # now remove duplicate subjects
         included.ids = phenotype.df$SubjectID %in% names(roh.data.sub)
-        #ids.to.exclude = phenotype.df$SubjectID[!included.ids]
-        #phenotype.df.nodup = phenotype.df[ !phenotype.df$SubjectID %in% ids.to.exclude, ]
         phenotype.df.nodup = phenotype.df[included.ids, ]
 
         # define a regression kernel here
@@ -136,10 +134,23 @@ PerformAssociationAnalysis = function(input.prefix, output.prefix, phenotype.df,
 
         # add position as column to left of results
         snp.positions = roh.data[probes.to.analyze, 2]
-        result.final = cbind(snp.positions, result)
+        snp.labels = paste(chr, roh.data[probes.to.analyze, 2], sep = ":")
+        result.final  = data.frame(cbind(snp.positions, snp.labels, result))
+
+        # add number of samples analyzed to right of results
+        num.samples  = apply(roh.data[,-c(1:3)], 1, function(z) sum(!is.na(z)))[probes.to.analyze]
+        #result.final = data.frame(cbind(result, num.samples))
+        result.final$nsamples = num.samples
+
+        # also add dummy-coded alleles (G --> ROH = 1, C --> ROH = 0) to left
+        result.final$eff_allele = "G"
+        result.final$alt_allele = "C"
+
+        # add number of ROH segments observed at the probe
+        result.final$nROH = nSNPs.in.ROH[probes.to.analyze]
 
         # name columns and save to file
-        colnames(result.final) = c("Probe", "beta", "stderr", "t", "p")
+        colnames(result.final) = c("position", "Probe", "beta", "stderr", "t", "p", "nsamples", "eff_allele", "alt_allele", "nROH")
         write.table(result.final, file = output.file.path, quote = FALSE, sep = "\t", row.names = FALSE)
     }
 

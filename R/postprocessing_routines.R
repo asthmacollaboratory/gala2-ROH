@@ -20,7 +20,7 @@
 # It has no input or output.
 # ==============================================================================
 
-ConcatenateResults = function(input.prefix, output.path, input.suffix = "ROH.R.out.results") {
+ConcatenateResults = function(input.prefix, output.path, input.suffix = "ROH.R.out.results", sort.result = FALSE) {
     # ConcatenateResults 
     #
     # This function merges the chromosome results into one data frame with probes ordered by P value.
@@ -33,6 +33,8 @@ ConcatenateResults = function(input.prefix, output.path, input.suffix = "ROH.R.o
     #     input.suffix: the suffix of the file after chromosome. Should coincide with argument
     #         suffix from function PerformAssociationAnalysis().
     #         Default: "ROH.R.out.results"
+    #     sort.result: should final data.frame be sorted by p-value?
+    #         Default: FALSE
     #
     # Output: One data frame with all results
 
@@ -60,14 +62,16 @@ ConcatenateResults = function(input.prefix, output.path, input.suffix = "ROH.R.o
     }
 
     # sort frame by p-value
-    gwas.df = gwas.df[order(gwas.df$p),]
+    if (sort.result) {
+        gwas.df = gwas.df[order(gwas.df$p),]
+    }
   
     # write data frame to file
     fwrite(gwas.df, file = output.path)
     return(gwas.df)
 }
 
-CreateDiagnosticPlots = function(results.filepath, manhattan.plot.filepath, qq.plot.filepath, manhattan.plot.title = "Manhattan plot", threshold = 1e-2, highlight.SNPs = NULL, manhattan.ylims = c(0,8), color = c("black", "blue"), significance.threshold = 5e-8, suggestive.threshold = 1e-7, qq.plot.title = "QQ Plot", qq.plot.subtitle = NULL, qq.xlim = NULL, qq.ylim = NULL) {
+CreateDiagnosticPlots = function(results.filepath, manhattan.plot.filepath, qq.plot.filepath, manhattan.plot.title = "Manhattan plot", threshold = 5e-8, highlight.SNPs = NULL, manhattan.ylims = c(0,8), color = c("black", "blue"), significance.threshold = 5e-8, suggestive.threshold = 1e-7, qq.plot.title = "QQ Plot", qq.plot.subtitle = NULL, qq.xlim = NULL, qq.ylim = NULL) {
     # CreateDiagnosticPlots
 	#
 	# This function merges the chromosome results into one file with probes ordered by P value
@@ -78,8 +82,8 @@ CreateDiagnosticPlots = function(results.filepath, manhattan.plot.filepath, qq.p
 	#	  qq.plot.filepath: file name of QQ plot that will be written to working directory
 	#	  qq.plot.title: title of QQ plot
     # 	  threshold: pvalue limit for labeling SNPs on the plot. SNPs with p-values greater than "threshold"
-    #         are not plotted. High values of "threshold" make plotting speedy but make plots look strange.
-    #         Default: 1e-2
+    #         are not plotted. Low values of "threshold" make plotting slow and may overlabel the plot. 
+    #         Default: 5e-8 (genome-wide significance)
     #     highlight.SNPs: vector of SNP ids to highlight,
     #         e.g.  highlight.SNPs = c("rs12345", "rs90181294", "rs556782")
     #         Default: NULL (no SNPs to highlight)
@@ -107,9 +111,8 @@ CreateDiagnosticPlots = function(results.filepath, manhattan.plot.filepath, qq.p
 	gwas.df = fread(results.filepath, header = TRUE)
 
 	# Reformat dataframe to correct way for manhattan plot
-	gwas.df$BP = gwas.df$Probe
-	gwas.df.sub = subset(gwas.df, select = c("chr", "Probe", "p", "BP"))
-	colnames(gwas.df.sub) = c("CHR", "SNP", "P", "BP")
+	gwas.df.sub = subset(gwas.df, select = c("chr", "position", "Probe", "p"))
+	colnames(gwas.df.sub) = c("CHR", "BP", "SNP", "P")
 
 	# create Manhttan plot of ROH GWAS results
     manhattan.plot = CreateManhattanPlot(gwas.df.sub,
