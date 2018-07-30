@@ -1,7 +1,7 @@
 # ==============================================================================
 # Copyright 2018, Asthma Collaboratory
 # coded by Kevin L. Keys, Andrew Zeiger, Zachary Szpiech
-# 
+#
 # This script contains analysis functions for association testing.
 # Source this script after setting the R environment, e.g.
 #
@@ -29,7 +29,7 @@ PerformAssociationAnalysis = function(input.prefix, output.prefix, phenotype.df,
     # The results are written to file. This function returns nothing.
     # NOTA BENE: PerformAssociationAnalysis makes explicit use of %dopar% from the doParallel package.
     # PerformAssociationAnalysis will set up a parallel backend, farm out computations to slave cores,
-    # and then shut down the backend when finished. 
+    # and then shut down the backend when finished.
     #
     # Args:
     #     input.prefix: an incomplete file path to the ROH data, e.g.
@@ -51,7 +51,7 @@ PerformAssociationAnalysis = function(input.prefix, output.prefix, phenotype.df,
     #     ncores: how many cores should be used for parallel calculations?
     #         Default: 22 (one for each chromosome)
     #     min.samples.at.probe: at minimum, how many samples must have ROH at a probe to merit analysis?
-    #         Default: 2 (probes with 0 or 1 samples with ROH discarded) 
+    #         Default: 2 (probes with 0 or 1 samples with ROH discarded)
     #
     # Output: Nothing
 
@@ -91,9 +91,9 @@ PerformAssociationAnalysis = function(input.prefix, output.prefix, phenotype.df,
 
         # find the subjects in common between roh.data.sub and phenotype.df
         # discard subjects not in both data frames
-        # then reorder the columns in increasing alphanumeric order 
+        # then reorder the columns in increasing alphanumeric order
         subjects.in.common = names(roh.data.sub) %in% phenotype.df$SubjectID
-        roh.data.sub = roh.data.sub[, subjects.in.common] 
+        roh.data.sub = roh.data.sub[, subjects.in.common]
         name.order   = order(colnames(roh.data.sub))
         roh.data.sub = roh.data.sub[,name.order]
 
@@ -103,7 +103,7 @@ PerformAssociationAnalysis = function(input.prefix, output.prefix, phenotype.df,
 
         # define a regression kernel here
         # ideally we would define it outside of the function. however, in that case, %dopar% fails:
-        # the function is defined on master process, and it does NOT propagate to slave processes. 
+        # the function is defined on master process, and it does NOT propagate to slave processes.
         # in contrast, defining it within the %dopar% loop ensures that all processes can see it
         FitLinearModel = function(one.roh.snp, phenotype.df, model.formula, type = "gaussian") {
             # FitLinearModel

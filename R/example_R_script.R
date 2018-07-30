@@ -2,7 +2,7 @@
 # ==============================================================================
 # Copyright 2018, Asthma Collaboratory
 # coded by A. Californian
-#  
+#
 # This script demonstrates example code in proper R style.
 # It has no input or output.
 # ==============================================================================
@@ -23,16 +23,16 @@ library(ggplot2)
 SumTwoNumbers = function(x, y){
 	# Computes the sum of two numbers.
     # Note that a nonfinite argument poisons the outcome.
-	#  
+	#
 	# Args:
 	#     x: A number.
 	#     y: Another number.
-	#  
+	#
 	# Returns:
 	#     The sum x + y
 
 	return(x + y)
-}  
+}
 
 # ==============================================================================
 # executable code goes here

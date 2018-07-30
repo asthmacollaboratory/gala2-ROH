@@ -1,6 +1,6 @@
 #!/usr/bin/env Rscript --vanilla
 # ==============================================================================
-# Copyright Asthma Collaboratory (2018) 
+# Copyright Asthma Collaboratory (2018)
 # Coded by Kevin L. Keys and Jennifer R. Liberto
 #
 # This script loads all of the libraries required for analyses.
@@ -12,7 +12,7 @@
 #
 #     source("set_R_environment.R")
 #
-# Nota bene: all variables and subroutines are defined in the current workspace. 
+# Nota bene: all variables and subroutines are defined in the current workspace.
 # Consequently, all variables and functions are deletable with
 #
 #    rm(list = ls() )
@@ -25,10 +25,10 @@
 # ==============================================================================
 
 LoadPackage = function(package.name, library.path){
-	# LoadPackage 
+	# LoadPackage
 	#
 	# This function loads a package into the current workspace.
-	# If the package is not installed, then LoadPackage will attempt to install it. 
+	# If the package is not installed, then LoadPackage will attempt to install it.
 	# The installed package is then silently loaded
 
 	if(!require(package.name, lib.loc = library.path, character.only = TRUE, quietly = TRUE, warn.conflicts = FALSE)){
@@ -44,7 +44,7 @@ AutoloadPackages = function(vector.of.package.names, library.path){
 	# This function calls LoadPackage on a vector of package names.
 	#
 	# Args:
-	#	list.of.package.names: a vector of package names, e.g. c("ggplot2", "MASS") 
+	#	list.of.package.names: a vector of package names, e.g. c("ggplot2", "MASS")
 	#
 	# Output: NULL
 
@@ -63,7 +63,7 @@ bitmap.type     = "cairo"  # needed for producing raster plots
 
 # this vector should contain all packages required for analysis
 auto.loads = c("ggplot2", "dplyr", "data.table", "ggpubr", "doParallel", "readr",
-    "qqman", "ggrepel", "RColorBrewer", "grid", "gridExtra") 
+    "qqman", "ggrepel", "RColorBrewer", "grid", "gridExtra", "reshape2")
 
 # ==============================================================================
 # executable code
@@ -72,7 +72,7 @@ auto.loads = c("ggplot2", "dplyr", "data.table", "ggpubr", "doParallel", "readr"
 # set CRAN mirror to UC Berkeley
 local({
     r = getOption("repos")
-    r["CRAN"] = cran.mirror 
+    r["CRAN"] = cran.mirror
     options(repos = r)
 })
 

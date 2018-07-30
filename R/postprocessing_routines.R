@@ -6,7 +6,7 @@
 # -- Andy M. Zeiger
 # -- Annie Li
 
-# This script contains subroutines for plotting and analyzing GWAS results. 
+# This script contains subroutines for plotting and analyzing GWAS results.
 # Source this script after setting the R environment, e.g.
 #
 #     source("set_R_environment.R")
@@ -21,7 +21,7 @@
 # ==============================================================================
 
 ConcatenateResults = function(input.prefix, output.path, input.suffix = "ROH.R.out.results", sort.result = FALSE) {
-    # ConcatenateResults 
+    # ConcatenateResults
     #
     # This function merges the chromosome results into one data frame with probes ordered by P value.
     # The function will write the merged data frame to file and return it.
@@ -42,7 +42,7 @@ ConcatenateResults = function(input.prefix, output.path, input.suffix = "ROH.R.o
 	chr = 1
 	input.file.path = paste(input.prefix, chr, "ROH.R.out.results", sep = ".")
 	results.df = fread(input.file.path, header = TRUE)
-  
+
     # make a data frame for concatenating results files
     # will tack chromosome number as new leftmost column
     nROHs   = dim(results.df)[1]
@@ -65,7 +65,7 @@ ConcatenateResults = function(input.prefix, output.path, input.suffix = "ROH.R.o
     if (sort.result) {
         gwas.df = gwas.df[order(gwas.df$p),]
     }
-  
+
     # write data frame to file
     fwrite(gwas.df, file = output.path)
     return(gwas.df)
@@ -73,16 +73,16 @@ ConcatenateResults = function(input.prefix, output.path, input.suffix = "ROH.R.o
 
 CreateDiagnosticPlots = function(results.filepath, manhattan.plot.filepath, qq.plot.filepath, manhattan.plot.title = "Manhattan plot", threshold = 5e-8, highlight.SNPs = NULL, manhattan.ylims = c(0,8), color = c("black", "blue"), significance.threshold = 5e-8, suggestive.threshold = 1e-7, qq.plot.title = "QQ Plot", qq.plot.subtitle = NULL, qq.xlim = NULL, qq.ylim = NULL) {
     # CreateDiagnosticPlots
-	#
-	# This function merges the chromosome results into one file with probes ordered by P value
-	#
-	# Args:
-	#	  results.filepath: path to concatenated GWAS results for one population
-	#	  manhattan.plot.filepath: path where Manhattan plot will be saved
-	#	  qq.plot.filepath: file name of QQ plot that will be written to working directory
-	#	  qq.plot.title: title of QQ plot
+    #
+    # This function merges the chromosome results into one file with probes ordered by P value
+    #
+    # Args:
+    #	  results.filepath: path to concatenated GWAS results for one population
+    #	  manhattan.plot.filepath: path where Manhattan plot will be saved
+    #	  qq.plot.filepath: file name of QQ plot that will be written to working directory
+    #	  qq.plot.title: title of QQ plot
     # 	  threshold: pvalue limit for labeling SNPs on the plot. SNPs with p-values greater than "threshold"
-    #         are not plotted. Low values of "threshold" make plotting slow and may overlabel the plot. 
+    #         are not plotted. Low values of "threshold" make plotting slow and may overlabel the plot.
     #         Default: 5e-8 (genome-wide significance)
     #     highlight.SNPs: vector of SNP ids to highlight,
     #         e.g.  highlight.SNPs = c("rs12345", "rs90181294", "rs556782")
@@ -138,24 +138,24 @@ CreateDiagnosticPlots = function(results.filepath, manhattan.plot.filepath, qq.p
 ComputeSignificanceThreshold = function(input.file) {
     # ComputeSignificantThreshold
     #
-	# The function uses coda to analyze the p-values from a GWAS.
+    # The function uses coda to analyze the p-values from a GWAS.
     # It then computes the effective number of independent tests
     # and the corresponding significance threshold for your data
-	# 
-	# Args: 
-	#   input.file: Your input file name. The expected format is
+    #
+    # Args:
+    #   input.file: Your input file name. The expected format is
     #     the output from PerformAssociationAnalysis().
-	#
-	# Returns:
-	#   A list with four entries:
+    #
+    # Returns:
+    #   A list with four entries:
     #     -- number of independent tests
-    #     -- Bonferroni correction for multiple testing 
+    #     -- Bonferroni correction for multiple testing
     #     -- the significance threshold (1 / num_ind_tests)
     #     -- the suggestive threshold
-	
-	# =================================================
-	# Load input file
-	# =================================================
+
+    # =================================================
+    # Load input file
+    # =================================================
     input = fread(input.file, fill = TRUE)
 
     # =================================================
@@ -168,18 +168,18 @@ ComputeSignificanceThreshold = function(input.file) {
     # Because effectiveSize() adjusts for autocorrelation between p-values, so if the function is computed on a sorted p-value, you will get a really small number
     setorder(copy.input, chr, Probe)
 
-	# =================================================
-	# Calculate the significance threshold
-	# =================================================
-	# coda: calculates adjusted significance threshold with Bonferroni correction
-	# effectiveSize() adjusts for autocorrelation (correlation between values)
-	# effectiveSize() basically calculates the number of independent tests
-	#   Need to add -log10 when calculating effectiveSize since the function requires large numbers not small numbers(ex:10^-6 will be converted to 6) 
+    # =================================================
+    # Calculate the significance threshold
+    # =================================================
+    # coda: calculates adjusted significance threshold with Bonferroni correction
+    # effectiveSize() adjusts for autocorrelation (correlation between values)
+    # effectiveSize() basically calculates the number of independent tests
+    #   Need to add -log10 when calculating effectiveSize since the function requires large numbers not small numbers(ex:10^-6 will be converted to 6)
     total_eff = effectiveSize(-log10(copy.input$p))
-	# Output is :
-	    # var 1
-	    # Number
-	# Since we only need the number for the threshold, as.numeric() will fix this and return just a numeric value, and this numeric value is carried throughout the rest of the code
+    # Output is :
+    # var 1
+    # Number
+    # Since we only need the number for the threshold, as.numeric() will fix this and return just a numeric value, and this numeric value is carried throughout the rest of the code
     total_eff = as.numeric(total_eff)
 
     # Bonferroni correction: divide alpha level(0.05) by the number of independent test
