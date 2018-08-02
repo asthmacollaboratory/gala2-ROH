@@ -44,7 +44,7 @@ if [[ $# -lt "${CMDLINEPARAM}" ]]; then
     display_usage
     exit 1
 fi
-if [[ ( $# == "--help") ||  $# == "-h" ]]
+if [[ ( $# == "--help") ||  $# == "-h" ]]; then
     display_usage
     exit 0
 fi
@@ -67,7 +67,7 @@ echo -e "\tpath to METAL executable: $metal"
 echo -e "All further arguments are ignored."
 
 # make temporary working directory and file
-$tmpdir=$(mktemp -d)
+tmpdir=$(mktemp -d)
 metalscript="${tmpdir}/script.metal"
 
 # this here-document writes the METAL script using our BASH variables
