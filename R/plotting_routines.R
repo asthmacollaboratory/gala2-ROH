@@ -240,87 +240,27 @@ DensityAndHistogramPlot = function(input.pheno, output.file, phenotype, title, s
     return(pheno.plot)
 }
 
-
-RohPlot = function(input.pheno, phenotype, input.dosage, probe.min, probe.max, size = 20, roh.title = "ROH vs. phenotype", roh.subtitle = NULL, output.file) {
+RohPlot = function(input.df, phenotype, size, sig.probe, roh.title, roh.subtitle, output.dir, output.pfx) {
     # RohPlot
     #
     # This function produces a plot displaying the ROH data for a specific phenotype and population; the plot has Probes on the x-axis and the phenotype on the y-axis, each horizontal line represents the ROH for an individual in the population
     #
     # Arguments:
-    #   input.pheno: Input phenotype file produced by the phenotype script; the input file should contain the SubjectIDs and the phenotype under investigation
-    #   phenotype: The column name for your phenotype in your phenotype file
-    #   input.dosage: Input dosage file containing the ROH data
-    #       Note that you must specify the population and chromosome of interest
-    #       The file has SubjectID as rows, and probes as columns (saved as chr and pos; however, chromosome is same throughout, so probes depend on pos (position)), and for each Subject and probe there is either the value 0 or 1, meaning is the individual's probe located inside an ROH segment (0 = probe not in ROH, 1 = probe in ROH)
-    #   probe.min: The minimum probe position; this should match the range you are using in the Locus Zoom plots (For example: I looked at the probes between the range of 116000000 to 117000000, so the minimum probe position is 116000000)
-    #   probe.max: The maximum probe position; this should match the range you are using in the Locus Zoom plots (For example: I looked at the probes between the range of 116000000 to 117000000, so the maximum probe position is 117000000)
-    #   size: The size of each point on the graph, the default in 20
+    #   input.df: The input data frame
+    #   phenotype:  The column name that contains the phenotype values
+    #   size: The size of each point on the graph
+    #   sig.probe: The probe of interest, a vertical line will be plotted at the probe of interest 
     #   roh.title: The title of the ROH plot (default is "ROH vs. phenotype")
     #   roh.subtitle: The subtitle of the ROH plot (default is NULL)
     #       Note that adding a subtitle compresses the graph
-    #   output.file: Output file name, put the full file path to where you want to save your plot to
-    #       *** MAKE SURE YOU END THE FILE NAME WITH .png OR .pdf
+    #   output.dir: The output directory
+    #   output.pfx: The prefix of the saved plot names
     #
     # Output: A plot displaying the ROH data for a specific phenotype and population; the plot has Probes on the x-axis and the phenotype on the y-axis, each horizontal line represents the ROH for an individual in the population
-
-
-    # =================================================================
-    # Load data
-    # =================================================================
-
-    # Load phenotype file
-    pheno = read.table(input.pheno, header = T, sep = "\t")
-
-    # Load dosage data on ROH
-    dosage = read.table(input.dosage, header = T)
-
-    # =================================================================
-    # Subset, transpose, and melt data frame
-    # =================================================================
-
-    # Subset dosage data for only the chromosome segment of interset (this segment/section should match the segment/section used in your locus zoom plot
-    dosage.segment = subset(dosage, pos > probe.min & pos < probe.max)
-
-    # Transpose the dosage data so that the columns are now probes and the SubjectIDs are now rows
-    #   This allows for us to melt our data
-    dosage.transpose = t(dosage.segment)
-
-    # Since the column names are just the column number, rename the column names after the probe position, which is in the second row, this will be important when we melt our data, which looks at the column names
-    colnames(dosage.transpose) = dosage.transpose[2, ]
-
-    # Melt the data so that you will have a column for SubjectID and ROH data
-    #   Essentially melt() will collapse all the columns into one column
-    # An example of how your data may look after melt()
-    #   Var1 is the SubjectIDs, Var2 is the probe, and value is whether the individual has the specified probe in an ROH segment
-    #        Var1     Var2 value
-	#    1 HR1809 45001031     0
-	#    2 HR1755 45001031     0
-	#    3 HR1734 45001031     0
-	#    4 HR1661 45001031     0
-	#    5 HR1727 45001031     0
-	#    6 HR1832 45001031     0
-    # Remove the chromosome and probe rows (first and second row), since we already have probes set as column names and all the probes are in the same chromosome
-    dosage.melt = melt(dosage.transpose[-c(1:2), ])
-
-    # Change the column names of the melted data, so that Var1 will be "SubjectID", Var2 will be "Probe", and value will be "ROH"
-    colnames(dosage.melt) = c("SubjectID", "Probe", "ROH")
-
-    # Subset the phenotype file for only the SubjectID and phenotype data (the covariates and principal components are not needed for plotting ROH)
-    pheno.subset = subset(pheno, select = c("SubjectID", phenotype))
-
-    # Merge the dosage data with the phenotype data by the column SubjectID
-    merge.df = merge(dosage.melt, pheno.subset, by = "SubjectID", all.y = T)
-
-    # Order the data by probe position and phenotype
-    merge.df = setorderv(merge.df, cols = c(phenotype), order = 1)
-
-    # =====================================================================
-    # Plotting ROH data
-    # =====================================================================
-
+    
     # Set the colors for the plot to be white for 0 and black for 1
     set.colors = c("0" = "white", "1" = "black")
-
+    
     # Plot the data using ggplot()
     # The probes will be on the x-axis, while the sorted phenotype will be on the y-axis
     # Note that get() was used since the phenotype input is a character string, so get() will return the value of the character string, which is the column containing the phenotype values
@@ -329,15 +269,146 @@ RohPlot = function(input.pheno, phenotype, input.dosage, probe.min, probe.max, s
     # geom_point() plots the points
     #   shape 15 is a square, so that ROH segments (with consecutive 1s) will form a line
     #   size adjusts for size of the point (in our case it is a square)
-    # labs() sets the labels of the title, subtitle, x-axis, y-axis, and legend
-    roh.plot = ggplot(data = merge.df, aes(x = Probe, y = get(phenotype))) +
+    #   geom_vline() plots a vertical line at the probe of interest
+    #   The arguments in theme() are used to remove the gridded background, and to adjust the legend key
+    # guides() is used to enlarge the size of the legend keys
+    # labs() sets the labels of the title, subtitle, x-axis, y-axis, and legend 
+    roh.plot = ggplot(data = input.df, aes(x = probe.order, y = pheno.order)) + 
         geom_point(shape = 15, size = size, aes(color = as.character(ROH))) +
         scale_color_manual(values = set.colors) +
+        geom_vline(xintercept = sig.probe, color = "black", size = 1) +
+        theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background = element_blank(), axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), axis.text.x = element_blank(), axis.text.y = element_blank(), legend.key = element_rect(color = "black", fill = "white", size = 1)) +
+        guides(color = guide_legend(override.aes = list(size = 10))) +
         labs(title = roh.title, subtitle = roh.subtitle, x = "Probes", y = phenotype, color = "Probe in ROH")
 
     # Use ggsave() to save ggplots
-    ggsave(roh.plot, file = output.file)
-
-    # return the plot
-    return(roh.plot)
+    ggsave(file = paste0(output.dir, output.pfx, ".roh.png"), plot = roh.plot)
 }
+
+LancPlot = function(input.lanc, input.sum.lanc, input.roh.lanc, phenotype, colorblind.friendly = FALSE, size, lanc.sig.probe, sum.lanc.sig.probe, roh.lanc.sig.probe, ancestry.title = "Local Ancestry Plot", ancestry.subtitle = NULL, sum.title = "Local Ancestry Summary Plot", sum.subtitle = NULL, roh.lanc.title = "ROH Local Ancestry", roh.lanc.subtitle = NULL, output.dir, output.pfx) {
+    # LancPlot
+    #
+    # This function plots the local ancestry plot for a specific phenotype, population, and region on a chromosome
+    # Three different local ancestry plots will be created:
+    #     1) For each probe and individual, the local ancestry will be plotted 
+    #         The probe positions are on the x-axis, the phenotype values are on the y-axis, and each horizontal line represents each individual with segments of different colors representing different ancestry
+    #     2) Summary plot for the local ancestry data
+    #         For each probe, the mean of the phenotype values for each ancestry will be plotted
+    #         The probe positions are on the x-axis and the phenotype values are on the y-axis
+    #         Each probe will have a total of 3 points (1 for each ancestry)
+    #     3) For probes in an ROH, the local ancestry data will be plotted
+    #         The probe positions are on the x-axis and the phenotype values are on the y-axis
+    #
+    # Arguments:
+    #     input.lanc: The input data frame for plotting the local ancestry data
+    #     input.sum.lanc: The input data frame for plotting the summary local ancestry
+    #     input.roh.lanc: The input data frame for plotting the local ancestry for the probes in an ROH
+    #     colorblind.friendly: If TRUE, a color blind friendly palette is used instead of the normal red, blue, yellow scale for the ROH local ancestry plot (default is FALSE)
+    #     phenotype: The name for the column containing the phenotype data
+    #     size: The size of each point on the graph (default is 0.05)
+    #     lanc.sig.probe: The probe of interest, a vertical line will be plotted at the probe of interest.This is for the local ancestry plot 
+    #     sum.lanc.sig.probe: The probe of interest, a vertical line will be plotted at the probe of interest.This is for the summary local ancestry plot 
+    #     roh.lanc.sig.probe: The probe of interest, a vertical line will be plotted at the probe of interest. This is for the ROH local ancestry plot.
+    #     ancestry.title: The title of the local ancestry plot (default is "Local Ancestry Plot")
+    #                   Note that adding a subtitle compresses the graph
+    #     ancestry.subtitle: The subtitle of the local ancestry plot (default is NULL)
+    #                   Note that adding a subtitle compresses the graph
+    #     sum.title: The title of the summary local ancestry plot (default is "Local Ancestry Summary Plot")
+    #     sum.subtitle: The subtitle of the summary local ancestry plot (default is NULL)
+    #                   Note that adding a subtitle compresses the graph
+    #     roh.lanc.title: The title of the ROH plot colored by ancestry (default is "ROH Local Ancestry Plot")
+    #     roh.lanc.subtitle: The subtitle of the ROH plot colored by ancestry (default is NULL)
+    #                   Note that adding a subtitle compresses the graph
+    #     output.dir: The output directory
+    #     output.pfx: The prefix of the saved plot names
+    #                 The following suffix will be added:
+    #                   ".lanc.png" for the local ancestry plot
+    #                   ".sum.lanc.png" for the local ancestry summary plot
+    #                   ".roh.lanc.png" for the ROH local ancestry plot
+    #
+    # ***Note that the first and second plots will contain haploid ancestry calls, while the third plot will contain diploid ancestry calls (due to the ROH data)
+    
+    # =================================================================
+    # Plot local ancestry
+    # =================================================================
+
+    # Set the ancestry colors manually      
+    set.colors = c("A" = "blue", "E" = "red", "N" = "yellow")
+    
+    # Plot the local ancestry data
+    #   Note that we plot 2 sets of data using geom_point(), one for the first ancestry call and the other for the second ancestry call
+    #   scale_color_manual() is used to manually set the ancestry colors
+    #   geom_vline() plots a vertical line at the probe of interest
+    #   The arguments in theme() are used to remove the gridded background
+    #   The arguments in guides() are used to enlarge the legend so that it is legible
+    #   labs() is used to label the plot
+    local.ancestry.plot = ggplot() +
+          geom_point(data = input.lanc, shape = 15, size = size, alpha = 0.5, aes(x = probe.order, y = pheno.order1, color = as.character(ancestry1))) +
+          geom_point(data = input.lanc, shape = 15, size = size, alpha = 0.5, aes(x = probe.order, y = pheno.order2, color = as.character(ancestry2))) +
+          scale_color_manual(values = set.colors) +
+          geom_vline(xintercept = lanc.sig.probe, color = "black", size = 1) +
+          theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background = element_blank(), axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), axis.text.x = element_blank(), axis.text.y = element_blank()) +
+          guides(color = guide_legend(override.aes = list(size = 10))) +
+          labs(title = ancestry.title, subtitle = ancestry.subtitle, x = "Probes", y = phenotype, color = "Probe in ROH")        
+    
+    # Save the plot
+    ggsave(filename = paste0(output.dir, output.pfx, ".lanc.png"), plot = local.ancestry.plot)
+
+    # =================================================================
+    # Plot summary local ancestry 
+    # =================================================================
+    
+    # Set line types for each ancestry
+    set.linetypes = c("A" = "solid", "E" = "longdash", "N" = "twodash")
+
+    # Plot the summary local ancestry plot
+    #   Note that we plot 2 sets of data using geom_point(), one for the first ancestry call and the other for the second ancestry call
+    #   geom_smooth() is used to plot the line of best fit
+    #   scale_color_manual() is used to manually set the ancestry colors
+    #   scale_linetype_manual() is used to manually assign each ancestry a line type
+    #   The arguments in theme() are used to remove the gridded background and to enlarge the legend key
+    #   labs() is used to label the plot
+    local.ancestry.summarise.plot = ggplot(data = input.sum.lanc, aes(x = Probe, y = mean)) +
+        geom_point(alpha = 0.1, aes(color = ancestry)) +
+        geom_smooth(aes(linetype = ancestry, color = ancestry)) +
+        geom_vline(xintercept = sum.lanc.sig.probe, color = "black", size = 1) +
+        scale_color_manual(values = set.colors, name = "Probe in ROH") +
+        scale_linetype_manual(values = set.linetypes, name = "Probe in ROH") +
+        theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background = element_blank(), legend.key.size = unit(5, "line")) +
+        labs(title = sum.title, subtitle = sum.subtitle, x = "Probes", y = phenotype)        
+
+    # Save the plot 
+    ggsave(filename = paste0(output.dir, output.pfx, ".sum.lanc.png"), plot = local.ancestry.summarise.plot)
+
+    # ====================================================================
+    # Plot ROH and local ancestry data
+    # ====================================================================
+
+    # Set the color scheme for the heteroxygous and homozygous ancestry calls  
+    if (colorblind.friendly == TRUE) {
+        set.colors.roh.lanc = c("AA" = "grey30", "EE" = "#D55E00", "NN" = "turquoise", "EA" = "yellow", "AN" = "orange", "EN" ="#CC79A7")
+    } else {
+        set.colors.roh.lanc =  c("AA" = "blue", "EE" = "red", "NN" = "yellow", "EA" = "purple", "AN" = "green", "EN" = "orange")
+    }
+    
+    # Plot the ROH local ancestry data
+    #   geom_point() is used to plot the local ancestry data for ROH segments
+    #   scale_color_manual() is used to manually set the ancestry colors
+    #       The limits argument is added  to prevent levels from being dropped from the legend key if it is not being used, this way the legend is consistent between plots
+    #   geom_vline() plots a vertical line at or near the location of the probe of interest
+    #   The arguments in theme() are used to remove the gridded background
+    #   The arguments in guides() are used to enlarge the legend so that it is legible
+    #   labs() is used to label the plot
+    roh.lanc.plot.clean = ggplot(data = input.roh.lanc, aes(x = probe.order, y = pheno.order, color = ancTypes)) +
+        geom_point(shape = 15, size = size) +
+        scale_color_manual(values = set.colors.roh.lanc, limits = c("AA", "AN", "EA", "EE", "EN", "NN")) +
+        geom_vline(xintercept = roh.lanc.sig.probe, color = "black", size = 1) +
+        theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background = element_blank(), axis.ticks.x = element_blank(), axis.ticks.y = element_blank(), axis.text.x = element_blank(), axis.text.y = element_blank()) +
+        guides(color = guide_legend(override.aes = list(size = 10))) +
+        labs(title = roh.lanc.title, subtitle = roh.lanc.subtitle, x = "Probes", y = phenotype, color = "Probe in ROH")        
+    
+    # Save the plot 
+    ggsave(filename = paste0(output.dir, output.pfx, ".roh.lanc.png"), plot = roh.lanc.plot.clean)
+
+}
+
