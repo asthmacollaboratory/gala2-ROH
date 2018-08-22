@@ -40,7 +40,7 @@ ConcatenateResults = function(input.prefix, output.path, input.suffix = "ROH.R.o
 
     # read the results for chromosome 1 into memory
 	chr = 1
-	input.file.path = paste(input.prefix, chr, "ROH.R.out.results", sep = ".")
+	input.file.path = paste(input.prefix, chr, input.suffix, sep = ".")
 	results.df = fread(input.file.path, header = TRUE)
 
     # make a data frame for concatenating results files
@@ -50,7 +50,7 @@ ConcatenateResults = function(input.prefix, output.path, input.suffix = "ROH.R.o
 
     # repeat this process for remaining chromosomes
 	for (chr in 2:22) {
-        input.file.path = paste(input.prefix, chr, "ROH.R.out.results", sep = ".")
+        input.file.path = paste(input.prefix, chr, input.suffix, sep = ".")
         results.df = fread(input.file.path, header = TRUE)
         nProbes    = dim(results.df)[1]
 		gwas.temp  = data.table(chr = rep(chr, nProbes), results.df)

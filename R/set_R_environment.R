@@ -63,7 +63,7 @@ bitmap.type     = "cairo"  # needed for producing raster plots
 
 # this vector should contain all packages required for analysis
 auto.loads = c("ggplot2", "dplyr", "data.table", "ggpubr", "doParallel", "readr",
-    "qqman", "ggrepel", "RColorBrewer", "grid", "gridExtra", "reshape2")
+    "qqman", "ggrepel", "RColorBrewer", "grid", "gridExtra", "reshape2", "assertthat")
 
 # ==============================================================================
 # executable code

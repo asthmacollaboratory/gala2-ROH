@@ -20,8 +20,6 @@
 # define functions here
 # ==============================================================================
 
-
-
 PerformAssociationAnalysis = function(input.prefix, output.prefix, phenotype.df, model.formula, suffix = "ROH.R.out", type = "gaussian", ncores = 22, min.samples.at.probe = 2, library.path = "/media/BurchardRaid01/LabShare/Data/share_data_projectInProgress/ROH_project/R_libraries") {
     # PerformAssociationAnalysis
     #
@@ -37,7 +35,6 @@ PerformAssociationAnalysis = function(input.prefix, output.prefix, phenotype.df,
     #	  output.prefix: the title of the output files.
     #         The full output is "${output.prefix}.ROH.R.out.results"
     #	  phenotype.df: the dataframe with phenotype and covariates
-
     #     model.formula: a string to create a formula object used for the linear model fit. Can produce as, e.g.,
     #         "y ~ x + z" where y is outcome, x is ROH segment, and z is covariate.
     #	  suffix: when ROH dosage was produced, each cohort had a different file suffix.
@@ -70,8 +67,11 @@ PerformAssociationAnalysis = function(input.prefix, output.prefix, phenotype.df,
         # library.path is defined in set_R_environment.R
         .libPaths(c(library.path, .libPaths()))
 
-        input.file.path = paste(input.prefix, chr, suffix, sep = ".")
+        input.file.path  = paste(input.prefix, chr, suffix, sep = ".")
         output.file.path = paste(output.prefix, chr, "ROH.R.out.results", sep = ".")
+        residuals.path   = paste(output.file.path, "residuals", sep = ".")
+        deviances.path   = paste(output.file.path, "deviances", sep = ".")
+        null.devs.path   = paste(output.file.path, "nulldeviances", sep = ".")
 
         # read the ROH calls from file
         # use read.table in lieu of fread since the latter cannot easily handle gzipped files
@@ -101,6 +101,14 @@ PerformAssociationAnalysis = function(input.prefix, output.prefix, phenotype.df,
         included.ids = phenotype.df$SubjectID %in% names(roh.data.sub)
         phenotype.df.nodup = phenotype.df[included.ids, ]
 
+        # ensure that subjects appear in same order b/w phenotype and ROH data frames
+        # throw error otherwise
+        # redefinition of roh.data.sub sorts columns by SubjectID col of phenotype.df.nodup
+        roh.data.sub = roh.data.sub[, phenotype.df.nodup$SubjectID]
+        if ( !assertthat::are_equal(phenotype.df.nodup$SubjectID, names(roh.data.sub))) {
+            error("Mismatch between subjects in ROH and phenotype files after removing duplicates.\nEnsure that population of each file matches!\n")
+        }
+
         # define a regression kernel here
         # ideally we would define it outside of the function. however, in that case, %dopar% fails:
         # the function is defined on master process, and it does NOT propagate to slave processes.
@@ -120,9 +128,18 @@ PerformAssociationAnalysis = function(input.prefix, output.prefix, phenotype.df,
             #
             # Output: Coefficients of linear model
 
-            temp.df = glm(formula(model.formula), data = phenotype.df, family = type)
-            model.coefficients = summary(temp.df)$coef[2,]
-            return(model.coefficients)
+            my.glmfit =  glm(formula(model.formula), data = phenotype.df, family = type)
+            model.coefficients = summary(my.glmfit)$coef[2,]
+            #return(model.coefficients)
+            my.null.deviance = my.glmfit$null.deviance
+            my.deviance = my.glmfit$deviance
+            my.residuals = my.glmfit$residuals 
+            return(list(
+                "model.coefficients" = model.coefficients,
+                "deviance" = my.deviance,
+                "null.deviance" = my.null.deviance,
+                "residuals" = my.residuals)
+            )
         }
 
         # apply FitLinearModel as a kernel to the rows of roh.data.sub
@@ -130,16 +147,24 @@ PerformAssociationAnalysis = function(input.prefix, output.prefix, phenotype.df,
         # remember, each SNP is coded 0 (not in ROH) or 1 (in ROH)
         # the anonymous function wraps FitLinearModel to clarify what argument roh.data.sub occupies in FitLinearModel
         # TODO (Kevin): check if this can be rotated so that apply() works columnwise on roh.data.sub (potential performance boost!)
-        result = t(apply(roh.data.sub, 1, function(z) FitLinearModel(z, phenotype.df.nodup, model.formula, type)))
+        result = apply(roh.data.sub, 1, function(z) FitLinearModel(z, phenotype.df.nodup, model.formula, type=type))
+        modelfit.coefficients   = t(sapply(result, function(z) z[["model.coefficients"]]))
+        modelfit.deviances      = sapply(result,   function(z) z[["deviance"]])
+        modelfit.null.deviances = sapply(result,   function(z) z[["null.deviance"]])
+        modelfit.residuals      = t(sapply(result, function(z) z[["residuals"]]))
 
         # add position as column to left of results
         snp.positions = roh.data[probes.to.analyze, 2]
-        snp.labels = paste(chr, roh.data[probes.to.analyze, 2], sep = ":")
-        result.final  = data.frame(cbind(snp.positions, snp.labels, result))
+        snp.labels    = paste(chr, roh.data[probes.to.analyze, 2], sep = ":")
+        result.final  = data.frame(cbind(snp.positions, snp.labels, modelfit.coefficients))
+
+        # apply similar format output for deviances and residuals
+        deviances      = data.frame(cbind(snp.positions, snp.labels, modelfit.deviances))
+        null.deviances = data.frame(cbind(snp.positions, snp.labels, modelfit.null.deviances))
+        residualz      = data.frame(cbind(snp.positions, snp.labels, modelfit.residuals)) ## note: residuals() is a function, hence the "z"
 
         # add number of samples analyzed to right of results
         num.samples  = apply(roh.data[,-c(1:3)], 1, function(z) sum(!is.na(z)))[probes.to.analyze]
-        #result.final = data.frame(cbind(result, num.samples))
         result.final$nsamples = num.samples
 
         # also add dummy-coded alleles (G --> ROH = 1, C --> ROH = 0) to left
@@ -149,9 +174,18 @@ PerformAssociationAnalysis = function(input.prefix, output.prefix, phenotype.df,
         # add number of ROH segments observed at the probe
         result.final$nROH = nSNPs.in.ROH[probes.to.analyze]
 
-        # name columns and save to file
+        # name columns of all outputs and save then to file
         colnames(result.final) = c("position", "Probe", "beta", "stderr", "t", "p", "nsamples", "eff_allele", "alt_allele", "nROH")
         write.table(result.final, file = output.file.path, quote = FALSE, sep = "\t", row.names = FALSE)
+
+        colnames(deviances) = c("position", "Probe", "deviance")
+        write.table(deviances, file = deviances.path, quote = FALSE, sep = "\t", row.names = FALSE)
+
+        colnames(null.deviances) = c("position", "Probe", "null_deviance")
+        write.table(null.deviances, file = null.devs.path, quote = FALSE, sep = "\t", row.names = FALSE)
+
+        colnames(residualz) = c("position", "Probe", names(roh.data.sub))
+        write.table(residualz, file = residuals.path, quote = FALSE, sep = "\t", row.names = FALSE)
     }
 
     # shut down the cluster
