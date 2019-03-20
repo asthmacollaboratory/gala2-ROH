@@ -62,9 +62,9 @@ library.path    = "/media/BurchardRaid01/LabShare/Data/share_data_projectInProgr
 bitmap.type     = "cairo"  # needed for producing raster plots
 
 # this vector should contain all packages required for analysis
-auto.loads = c("assertthat", "data.table", "doParallel", "dplyr", "ggplot2",
+auto.loads = c("assertthat", "coda", "data.table", "doParallel", "dplyr", "ggplot2",
     "ggpubr", "ggrepel", "grid", "gridExtra", "MASS", "optparse", "qqman",
-    "RColorBrewer", "readr", "reshape2", "stringr")
+    "RColorBrewer", "readr", "reshape2", "stringr", "doSNOW")
 
 # ==============================================================================
 # executable code

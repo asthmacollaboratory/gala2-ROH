@@ -57,7 +57,8 @@ PerformAssociationAnalysis = function(input.prefix, output.prefix, phenotype.df,
     min.samples.at.probe >= 0 || stop("Argument min.samples.at.probe must be at least 0")
 
     # register a cluster to use for parallel execution
-    cl = makeCluster(ncores)
+    # ensure that function logs output
+    cl = makeCluster(ncores, outfile = paste0(output.prefix, ".log"))
     registerDoParallel(cl)
 
     # run association analysis for each chromosome separately
@@ -67,12 +68,14 @@ PerformAssociationAnalysis = function(input.prefix, output.prefix, phenotype.df,
         # library.path is defined in set_R_environment.R
         .libPaths(c(library.path, .libPaths()))
 
+        library(data.table)
+
         input.file.path  = paste(input.prefix, chr, suffix, sep = ".")
         output.file.path = paste(output.prefix, chr, "ROH.R.out.results", sep = ".")
         residuals.path   = paste(output.file.path, "residuals", sep = ".")
         deviances.path   = paste(output.file.path, "deviances", sep = ".")
         null.devs.path   = paste(output.file.path, "nulldeviances", sep = ".")
-        phenofile.path   = paste(output.file.path, "datavalues", "txt" sep = ".") 
+        phenofile.path   = paste(output.prefix, "datavalues", "txt", sep = ".") 
 
         # read the ROH calls from file
         # use read.table in lieu of fread since the latter cannot easily handle gzipped files
@@ -109,6 +112,7 @@ PerformAssociationAnalysis = function(input.prefix, output.prefix, phenotype.df,
         if ( !assertthat::are_equal(phenotype.df.nodup$SubjectID, names(roh.data.sub))) {
             error("Mismatch between subjects in ROH and phenotype files after removing duplicates.\nEnsure that population of each file matches!\n")
         }
+        cat("Data prepared on worker ", Sys.getpid(), "\n")
 
         # define a regression kernel here
         # ideally we would define it outside of the function. however, in that case, %dopar% fails:
@@ -152,6 +156,7 @@ PerformAssociationAnalysis = function(input.prefix, output.prefix, phenotype.df,
         modelfit.deviances      = sapply(result,   function(z) z[["deviance"]])
         modelfit.null.deviances = sapply(result,   function(z) z[["null.deviance"]])
         modelfit.residuals      = t(sapply(result, function(z) z[["residuals"]]))
+        cat("Linear model fitted on worker ", Sys.getpid(), "\n")
 
         # add position as column to left of results
         snp.positions = roh.data[probes.to.analyze, 2]
@@ -174,21 +179,27 @@ PerformAssociationAnalysis = function(input.prefix, output.prefix, phenotype.df,
         # add number of ROH segments observed at the probe
         result.final$nROH = nSNPs.in.ROH[probes.to.analyze]
 
+        # bookkeeping: output phenotype and covariate values for subjects that were in fact analyzed 
+        fwrite(phenotype.df.nodup, file = phenofile.path, quote = FALSE, sep = "\t")
+        cat("Analyzed data written on worker ", Sys.getpid(), "\n")
+
         # name columns of all outputs and save then to file
         colnames(result.final) = c("position", "Probe", "beta", "stderr", "t", "p", "nsamples", "eff_allele", "alt_allele", "nROH")
         fwrite(result.final, file = output.file.path, quote = FALSE, sep = "\t")
+        cat("Results written on worker ", Sys.getpid(), "\n")
 
         colnames(deviances) = c("position", "Probe", "deviance")
         fwrite(deviances, file = deviances.path, quote = FALSE, sep = "\t")
+        cat("Deviances written on worker ", Sys.getpid(), "\n")
 
         colnames(null.deviances) = c("position", "Probe", "null_deviance")
         fwrite(null.deviances, file = null.devs.path, quote = FALSE, sep = "\t")
+        cat("Null deviances written on worker ", Sys.getpid(), "\n")
 
-        colnames(residualz) = c("position", "Probe", names(roh.data.sub))
-        fwrite(residualz, file = residuals.path, quote = FALSE, sep = "\t")
+#        colnames(residualz) = c("position", "Probe", names(roh.data.sub))
+#        fwrite(residualz, file = residuals.path, quote = FALSE, sep = "\t")
+#        cat("Linear model fit residuals written on worker ", Sys.getpid(), "\n")
 
-        # bookkeeping: output phenotype and covariate values for subjects that were in fact analyzed 
-        fwrite(phenotype.df.nodup, file = phenofile.path, quote = FALSE, sep = "\t")
     }
 
     # shut down the cluster
