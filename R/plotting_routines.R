@@ -21,11 +21,11 @@
 # define functions here
 # ==============================================================================
 
-CreateManhattanPlot = function(df, threshold = 5e-8, highlight.SNPs = NULL, ylims = c(0,8), color = c("black", "blue"),
-    title = "Manhattan plot", significance.threshold = 5e-8, suggestive.threshold = 1e-7, save.as = NULL){
+CreateManhattanPlot = function(df, threshold = 5e-8, highlight.SNPs = NULL, ylims = c(0,8), color = c("gray47", "gray87"), point.size = 1,
+    title = "Manhattan plot", signif = 5e-8, suggestive = 1e-7, x.drop = NULL, save.as = NULL){
     # Create a Manhattan Plot
     #
-    # This function creates a Manhattan plot. It expects a data frame with the following four labeled columns:
+    # This function creates a Manhattan plot. It expects a data frame with the following four labeled columns (metadata allowed):
     #     CHR: the chromosome to plot
     #     SNP: the single nucleotide polymorphisms (one per row)
     #     BP:  the base pair (position) of each SNP to plot
@@ -45,13 +45,19 @@ CreateManhattanPlot = function(df, threshold = 5e-8, highlight.SNPs = NULL, ylim
     #         Default: c(0,8), which plots p-values up to 1e-8
     #     color = a vector of colors (min 2 colors)
     #         e.g. [color = c("color1", "color2", "color3")]
-    #         Default: c("black", "blue")
+    #         Default: c("gray47", "gray87")
+    #     point.size = a value or vector for point size (for scaling by effect size, for instance)
+    #         e.g. [point.size = df$size]
+    #         Default: 1
     #     title: an informative plot title
     #         Default: "Manhattan plot"
-    #     significance.threshold: the Bonferroni significance threshold.
+    #     signif: the Bonferroni significance threshold.
     #         Default: 5e-8 ("standard" genome-wide significance)
-    #     suggestive.threshold: the suggestive threshold of significance.
+    #     suggestive: the suggestive threshold of significance.
     #         Default: 1e-7
+    #     x.drop: vector of chromosome numbers to drop on the x axis label to reduce x-axis label overlapping.
+    #         e.g. [x.drop = c("19","21")]
+    #         Default: NULL (no chr labels dropped)
     #     save.as: a filepath for saving the plot to file
     #         Default: NULL (do not save to file)
     # Outputs:
@@ -80,14 +86,16 @@ CreateManhattanPlot = function(df, threshold = 5e-8, highlight.SNPs = NULL, ylim
 		mutate(is_annotate = ifelse(P < threshold, "yes", "no"))  ### done filtering!
 
 	# get chromosome center positions for x-axis
+	# remove selected chromosome labels
 	axisdf = df.tmp %>% group_by(CHR) %>% summarize(center = (max(BPcum) + min(BPcum)) / 2 )
+	if(isTRUE(x.drop)){axisdf[axisdf$CHR %in% x.drop,]$CHR = ''}
 
 	# plot with filtered data frame
 	# we will construct this ggplot stepwise
 	g = ggplot(df.tmp, aes(x = BPcum, y = -log10(P)))
 
 	# Show all points
-	g = g + geom_point(aes(color = as.factor(CHR)), alpha = 0.8, size = 2) +
+	g = g + geom_point(aes(color = as.factor(CHR), size = point.size), alpha = 0.8) +
 	scale_color_manual(values = rep(color, 22))
 
 	# custom X axis
@@ -99,11 +107,11 @@ CreateManhattanPlot = function(df, threshold = 5e-8, highlight.SNPs = NULL, ylim
 	g = g + ggtitle(paste0(title)) + labs(x = "Chromosome")
 
 	# add genome-wide significant.threshold and suggestive.threshold lines
-	g = g + geom_hline(yintercept = -log10(significance.threshold), color = "red") +
-	geom_hline(yintercept = -log10(suggestive.threshold), linetype = "dashed", color = "blue")
+	g = g + geom_hline(yintercept = -log10(signif), color = "red") +
+	geom_hline(yintercept = -log10(suggestive), linetype = "dashed", color = "blue")
 
 	# add highlighted points
-	g = g + geom_point(data = subset(df.tmp, is_highlight == "yes"), color = "orange", size = 2)
+	g = g + geom_point(data = subset(df.tmp, is_highlight == "yes"), color = "orange", size = point.size)
 
 	# add label using ggrepel to avoid overlapping
     df.label = df.tmp[df.tmp$is_annotate == "yes",]
