@@ -70,7 +70,7 @@ auto.loads = c("assertthat", "coda", "data.table", "doParallel", "dplyr", "ggplo
 # executable code
 # ==============================================================================
 
-# set CRAN mirror to UC Berkeley
+# set CRAN mirror
 local({
     r = getOption("repos")
     r["CRAN"] = cran.mirror
@@ -83,16 +83,16 @@ local({
 # R allows strings as factors by default
 # this is one of the most frustrating engineering decisions in the language
 # make the default to *not* convert strings to factors
-options(stringsAsFactors=FALSE)
+options(stringsAsFactors = FALSE)
 
 # max number of printed lines hopefully set to something reasonable
-options(max.print=max.print.lines)
+options(max.print = max.print.lines)
 
 # default text editor
-options(editor=editor)
+options(editor = editor)
 
 # turn off tk since we do not need it here
-options(menu.graphics=FALSE)
+options(menu.graphics = FALSE)
 
 # enable raster graphics
 options(bitmapType = bitmap.type)

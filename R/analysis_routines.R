@@ -58,7 +58,8 @@ PerformAssociationAnalysis = function(input.prefix, output.prefix, phenotype.df,
 
     # register a cluster to use for parallel execution
     # ensure that function logs output
-    cl = makeCluster(ncores, outfile = paste0(output.prefix, ".log"))
+    #cl = makeCluster(ncores, outfile = paste0(output.prefix, ".log"))
+    cl = makeCluster(ncores, outfile = "")
     registerDoParallel(cl)
 
     # run association analysis for each chromosome separately
@@ -75,11 +76,11 @@ PerformAssociationAnalysis = function(input.prefix, output.prefix, phenotype.df,
         residuals.path   = paste(output.file.path, "residuals", sep = ".")
         deviances.path   = paste(output.file.path, "deviances", sep = ".")
         null.devs.path   = paste(output.file.path, "nulldeviances", sep = ".")
-        phenofile.path   = paste(output.prefix, "datavalues", "txt", sep = ".") 
+        phenofile.path   = paste(output.prefix, "datavalues", "txt", sep = ".")
 
         # read the ROH calls from file
         # use read.table in lieu of fread since the latter cannot easily handle gzipped files
-        roh.data = read.table(input.file.path, header = TRUE, check.names = FALSE, stringsAsFactors = FALSE)
+        roh.data = read.table(input.file.path, header = TRUE, check.names = FALSE, stringsAsFactors = FALSE, colClasses = "numeric")
 
         # must subset the ROH data to included all samples with a minimum number of probes in ROH segments
         # need two pieces:
@@ -110,7 +111,7 @@ PerformAssociationAnalysis = function(input.prefix, output.prefix, phenotype.df,
         # redefinition of roh.data.sub sorts columns by SubjectID col of phenotype.df.nodup
         roh.data.sub = roh.data.sub[, phenotype.df.nodup$SubjectID]
         if ( !assertthat::are_equal(phenotype.df.nodup$SubjectID, names(roh.data.sub))) {
-            error("Mismatch between subjects in ROH and phenotype files after removing duplicates.\nEnsure that population of each file matches!\n")
+            stop("Mismatch between subjects in ROH and phenotype files after removing duplicates.\nEnsure that population of each file matches!\n")
         }
         cat("Data prepared on worker ", Sys.getpid(), "\n")
 
@@ -133,16 +134,30 @@ PerformAssociationAnalysis = function(input.prefix, output.prefix, phenotype.df,
             #
             # Output: Coefficients of linear model
 
-            my.glmfit =  glm(formula(model.formula), data = phenotype.df, family = type)
-            model.coefficients = summary(my.glmfit)$coef[2,]
-            my.null.deviance = my.glmfit$null.deviance
-            my.deviance = my.glmfit$deviance
-            my.residuals = my.glmfit$residuals 
-            return(list(
-                "model.coefficients" = model.coefficients,
-                "deviance" = my.deviance,
-                "null.deviance" = my.null.deviance,
-                "residuals" = my.residuals)
+            tryCatch(
+                {
+                    my.glmfit =  glm(formula(model.formula), data = phenotype.df, family = type)
+                    model.coefficients = summary(my.glmfit)$coef[2,]
+                    my.null.deviance = my.glmfit$null.deviance
+                    my.deviance = my.glmfit$deviance
+                    my.residuals = my.glmfit$residuals
+                    return(list(
+                        "model.coefficients" = model.coefficients,
+                        "deviance" = my.deviance,
+                        "null.deviance" = my.null.deviance,
+                        "residuals" = my.residuals)
+                    )
+                },
+                error = function(error_message) {
+                    message("Caught error:")
+                    message(error_message)
+                    return(list(
+                        "model.coefficients" = -Inf,
+                        "deviance" = -Inf,
+                        "null.deviance" = -Inf,
+                        "residuals" = -Inf)
+                    )
+                }
             )
         }
 
@@ -150,7 +165,6 @@ PerformAssociationAnalysis = function(input.prefix, output.prefix, phenotype.df,
         # this fits a linear model for each of the SNPs
         # remember, each SNP is coded 0 (not in ROH) or 1 (in ROH)
         # the anonymous function wraps FitLinearModel to clarify what argument roh.data.sub occupies in FitLinearModel
-        # TODO (Kevin): check if this can be rotated so that apply() works columnwise on roh.data.sub (potential performance boost!)
         result = apply(roh.data.sub, 1, function(z) FitLinearModel(z, phenotype.df.nodup, model.formula, type=type))
         modelfit.coefficients   = t(sapply(result, function(z) z[["model.coefficients"]]))
         modelfit.deviances      = sapply(result,   function(z) z[["deviance"]])
@@ -179,7 +193,7 @@ PerformAssociationAnalysis = function(input.prefix, output.prefix, phenotype.df,
         # add number of ROH segments observed at the probe
         result.final$nROH = nSNPs.in.ROH[probes.to.analyze]
 
-        # bookkeeping: output phenotype and covariate values for subjects that were in fact analyzed 
+        # bookkeeping: output phenotype and covariate values for subjects that were in fact analyzed
         fwrite(phenotype.df.nodup, file = phenofile.path, quote = FALSE, sep = "\t")
         cat("Analyzed data written on worker ", Sys.getpid(), "\n")
 
@@ -196,6 +210,7 @@ PerformAssociationAnalysis = function(input.prefix, output.prefix, phenotype.df,
         fwrite(null.deviances, file = null.devs.path, quote = FALSE, sep = "\t")
         cat("Null deviances written on worker ", Sys.getpid(), "\n")
 
+        # can't get this to work, will leave here as reminder for another time
 #        colnames(residualz) = c("position", "Probe", names(roh.data.sub))
 #        fwrite(residualz, file = residuals.path, quote = FALSE, sep = "\t")
 #        cat("Linear model fit residuals written on worker ", Sys.getpid(), "\n")
