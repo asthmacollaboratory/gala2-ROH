@@ -31,7 +31,7 @@ CreateManhattanPlot = function(df, label.threshold = 5e-8, highlight.SNPs = NULL
     x.drop = NULL, plot.width = 7, plot.height = 7, plot.units = "in"){
     # Create a Manhattan Plot
     #
-    # This function creates a Manhattan plot. It expects a data frame with the following four labeled columns:
+    # This function creates a Manhattan plot. It expects a data frame with the following four labeled columns (metadata allowed):
     #     CHR: the chromosome to plot
     #     SNP: the single nucleotide polymorphisms (one per row)
     #     BP:  the base pair (position) of each SNP to plot
@@ -57,9 +57,9 @@ CreateManhattanPlot = function(df, label.threshold = 5e-8, highlight.SNPs = NULL
     #         Default: 1
     #     title: an informative plot title
     #         Default: "Manhattan plot"
-    #     significance.threshold: the Bonferroni significance threshold.
+    #     signif: the Bonferroni significance threshold.
     #         Default: 5e-8 ("standard" genome-wide significance)
-    #     suggestive.threshold: the suggestive threshold of significance.
+    #     suggestive: the suggestive threshold of significance.
     #         Default: 1e-7
     #     x.drop: a numeric vector of chromosome numbers to not label when plotting,
     #         to reduce x-axis label overlapping.
@@ -101,6 +101,10 @@ CreateManhattanPlot = function(df, label.threshold = 5e-8, highlight.SNPs = NULL
     # get chromosome center positions for x-axis
     axisdf = df.tmp %>% group_by(CHR) %>% summarize(center = (max(BPcum) + min(BPcum)) / 2 )
 
+	# get chromosome center positions for x-axis
+	# remove selected chromosome labels
+	axisdf = df.tmp %>% group_by(CHR) %>% summarize(center = (max(BPcum) + min(BPcum)) / 2 )
+
     # remove selected chromosome labels, if requested
     if(!is.null(x.drop) & is.numeric(x.drop)) {
         axisdf[axisdf$CHR %in% x.drop, ]$CHR = ""
@@ -110,8 +114,9 @@ CreateManhattanPlot = function(df, label.threshold = 5e-8, highlight.SNPs = NULL
     # we will construct this ggplot stepwise
     g = ggplot(df.tmp, aes(x = BPcum, y = -log10(P)))
 
+
     # Show all points
-    g = g + geom_point(aes(color = as.factor(CHR)), alpha = 0.8, size = point.size) +
+	g = g + geom_point(aes(color = as.factor(CHR), size = point.size), alpha = 0.8) +
     scale_color_manual(values = rep(color, 22))
 
     # custom X axis
@@ -121,6 +126,7 @@ CreateManhattanPlot = function(df, label.threshold = 5e-8, highlight.SNPs = NULL
 
     # add plot and axis titles
     g = g + ggtitle(paste0(title)) + labs(x = "Chromosome")
+
 
     # add genome-wide significant.threshold and suggestive.threshold lines
     g = g + geom_hline(yintercept = -log10(significance.threshold), color = "red") +
