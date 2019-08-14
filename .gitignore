@@ -21,6 +21,7 @@ analysis/
 
 # ignore results
 *.Rdata
+*.txt
 
 # ignore environment file
 .env.sh

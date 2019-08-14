@@ -209,7 +209,7 @@ cat("Loading data for population ", pop.code, "\n")
 phenotype.df = fread(phenotype.filepath, header = TRUE)
 
 # subset phenotype.df to current pop
-phenotype.df = phenotype.df>%
+phenotype.df = phenotype.df %>%
     dplyr::filter(Pop_Code == pop.code)
 
 fwrite(phenotype.df, file = paste0(pop.code, ".txt"))
@@ -246,15 +246,15 @@ cat("Running analysis for population ", pop.code, "\n")
 
 # this runs association for each chromosome over one population
 PerformAssociationAnalysis(
-    input.prefix = input.prefix,
+    input.prefix  = input.prefix,
     output.prefix = out.pfx,
-    phenotype.df = phenotype.df,
+    phenotype.df  = phenotype.df,
     model.formula = model.formula,
-    suffix = out.suffix,
-    type = glm.type,
-    ncores = ncores,
+    suffix        = out.suffix,
+    type          = glm.type,
+    ncores        = ncores,
     min.samples.at.probe = min.samples.at.probe,
-    library.path = library.path
+    library.path  = library.path
 )
 
 cat("Perform association analysis complete.\n")
@@ -317,58 +317,62 @@ qq.plot.title = paste("QQ Plot for", pheno.name, "in", pop.code, sep = " ")
 CreateDiagnosticPlots(out.all.chr,
     manhattan.plot.filepath,
     qq.plot.filepath,
-    manhattan.plot.title = manhattan.plot.title,
-    qq.plot.title = qq.plot.title,
-    threshold = threshold,
+    manhattan.plot.title   = manhattan.plot.title,
+    qq.plot.title          = qq.plot.title,
+    threshold              = threshold,
     significance.threshold = significance.threshold,
-    suggestive.threshold = suggestive.threshold
+    suggestive.threshold   = suggestive.threshold
 )
 
 cat("Create diagnostic plots complete.\n")
 
 # save a file for summary statistics
-data.for.pheno = na.omit(subset(phenotype.df, select=c(pheno.name, unlist(str_split(covariate.list, ",")))))
+data.for.pheno = na.omit(subset(phenotype.df, select=c("SubjectID", pheno.name, unlist(str_split(covariate.list, ",")))))
 reg.type = ifelse(glm.type == "gaussian", "linear", "logistic")
 N = dim(data.for.pheno)[1]
 if ( reg.type == "logistic") {
     category0_N = sum(data.for.pheno[, pheno.name] == 0, na.rm = TRUE)
     category1_N = sum(data.for.pheno[, pheno.name] == 1, na.rm = TRUE)
-    my.mean    = NA
-    my.median  = NA
-    my.25thpc  = NA
-    my.75thpc  = NA
-    my.range   = NA 
+    my.mean     = NA
+    my.median   = NA
+    my.25thpc   = NA
+    my.75thpc   = NA
+    my.range    = NA 
 } else {
     category0_N = NA
     category1_N = NA
-    my.summary = summary(data.for.pheno[[pheno.name]], na.rm = TRUE)
-    my.mean    = as.numeric(my.summary["Mean"])
-    my.median  = as.numeric(my.summary["Median"])
-    my.25thpc  = as.numeric(my.summary["1st Qu."])
-    my.75thpc  = as.numeric(my.summary["3rd Qu."])
-    my.range   = paste(my.summary["Min."], my.summary["Max."], sep = " - ")
+    my.summary  = summary(data.for.pheno[[pheno.name]], na.rm = TRUE)
+    my.mean     = as.numeric(my.summary["Mean"])
+    my.median   = as.numeric(my.summary["Median"])
+    my.25thpc   = as.numeric(my.summary["1st Qu."])
+    my.75thpc   = as.numeric(my.summary["3rd Qu."])
+    my.range    = paste(my.summary["Min."], my.summary["Max."], sep = " - ")
 }
 
 
 summary.stats = data.table(
-    "Phenotype" = pheno.name,
+    "Phenotype"   = pheno.name,
     "Regression_Type" = reg.type,
-    "Population" = pop.code,
+    "Population"  = pop.code,
     "Sample_Size" = N,
     "Category0_N" = category0_N,
     "Category1_N" = category1_N,
-    "Mean" = my.mean,
-    "Median" = my.median,
+    "Mean"        = my.mean,
+    "Median"      = my.median,
     "25th_Percentile" = my.25thpc,
     "75th_Percentile" = my.75thpc,
-    "Range" = my.range,
-    "Covariates" = covariate.list,
+    "Range"           = my.range,
+    "Covariates"  = covariate.list,
     "Significance_Threshold" = significance.threshold,
-    "Suggestive_Threshold" = suggestive.threshold
+    "Suggestive_Threshold"   = suggestive.threshold
 )
 
-# save table to file
+# save summary stats table to file
 summary.filepath = file.path(out.dir, "results", paste(pop.code, "summarystats", "txt", sep = ".")) 
 fwrite(x = summary.stats, file = summary.filepath, sep = "\t", quote = FALSE, na = "NA")
+
+# save pheno/covar table to file
+phenocovar.filepath = file.path(out.dir, "results", paste(pop.code, pheno.name, "phenocovar", "txt", sep = ".")) 
+fwrite(x = data.for.pheno, file = phenocovar.filepath, sep = "\t", quote = FALSE, na = "NA")
 
 cat("Summary stats written to file\n")
