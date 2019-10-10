@@ -96,7 +96,7 @@ CreateManhattanPlot = function(df, label.threshold = 5e-8, highlight.SNPs = NULL
 
         # Add highlight and annotation information
         mutate(is_highlight = ifelse(SNP %in% highlight.SNPs, "yes", "no")) %>%
-        mutate(is_annotate = ifelse(P < threshold, "yes", "no"))  ### done filtering!
+        mutate(is_annotate = ifelse(P < label.threshold, "yes", "no"))  ### done filtering!
 
     # get chromosome center positions for x-axis
     axisdf = df.tmp %>% group_by(CHR) %>% summarize(center = (max(BPcum) + min(BPcum)) / 2 )
